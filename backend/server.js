@@ -11,13 +11,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Error:", err));
-
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 const startupResponseSchema = {
@@ -33,19 +28,19 @@ const startupResponseSchema = {
         innovation: { type: Type.NUMBER },
         demand: { type: Type.NUMBER },
         scalability: { type: Type.NUMBER },
-        feasibility: { type: Type.NUMBER }
+        feasibility: { type: Type.NUMBER },
       },
-      required: ["total", "innovation", "demand", "scalability", "feasibility"]
+      required: ["total", "innovation", "demand", "scalability", "feasibility"],
     },
     problem: { type: Type.STRING },
     solution: { type: Type.STRING },
     features: {
       type: Type.ARRAY,
-      items: { type: Type.STRING }
+      items: { type: Type.STRING },
     },
     techStack: {
       type: Type.ARRAY,
-      items: { type: Type.STRING }
+      items: { type: Type.STRING },
     },
     judge: {
       type: Type.OBJECT,
@@ -53,62 +48,62 @@ const startupResponseSchema = {
         pros: { type: Type.ARRAY, items: { type: Type.STRING } },
         cons: { type: Type.ARRAY, items: { type: Type.STRING } },
         risks: { type: Type.ARRAY, items: { type: Type.STRING } },
-        verdict: { type: Type.STRING }
+        verdict: { type: Type.STRING },
       },
-      required: ["pros", "cons", "risks", "verdict"]
+      required: ["pros", "cons", "risks", "verdict"],
     },
     enhancement: {
       type: Type.OBJECT,
       properties: {
         improvedIdea: { type: Type.STRING },
         advancedFeatures: { type: Type.ARRAY, items: { type: Type.STRING } },
-        futureScope: { type: Type.STRING }
+        futureScope: { type: Type.STRING },
       },
-      required: ["improvedIdea", "advancedFeatures", "futureScope"]
+      required: ["improvedIdea", "advancedFeatures", "futureScope"],
     },
     suggestions: {
       type: Type.OBJECT,
       properties: {
         growthTips: { type: Type.ARRAY, items: { type: Type.STRING } },
-        strategyImprovements: { type: Type.ARRAY, items: { type: Type.STRING } }
+        strategyImprovements: { type: Type.ARRAY, items: { type: Type.STRING } },
       },
-      required: ["growthTips", "strategyImprovements"]
+      required: ["growthTips", "strategyImprovements"],
     },
     pitches: {
       type: Type.OBJECT,
       properties: {
         short: { type: Type.STRING },
         elevator: { type: Type.STRING },
-        investor: { type: Type.STRING }
+        investor: { type: Type.STRING },
       },
-      required: ["short", "elevator", "investor"]
+      required: ["short", "elevator", "investor"],
     },
     funding: {
       type: Type.OBJECT,
       properties: {
         estimatedCost: { type: Type.STRING },
         breakEven: { type: Type.STRING },
-        investmentLevel: { type: Type.STRING }
+        investmentLevel: { type: Type.STRING },
       },
-      required: ["estimatedCost", "breakEven", "investmentLevel"]
+      required: ["estimatedCost", "breakEven", "investmentLevel"],
     },
     competitorAnalysis: {
       type: Type.OBJECT,
       properties: {
         competitors: { type: Type.ARRAY, items: { type: Type.STRING } },
         marketGap: { type: Type.STRING },
-        advantages: { type: Type.ARRAY, items: { type: Type.STRING } }
+        advantages: { type: Type.ARRAY, items: { type: Type.STRING } },
       },
-      required: ["competitors", "marketGap", "advantages"]
+      required: ["competitors", "marketGap", "advantages"],
     },
     chartData: {
       type: Type.OBJECT,
       properties: {
         growth: { type: Type.ARRAY, items: { type: Type.NUMBER } },
-        demandSegments: { type: Type.ARRAY, items: { type: Type.NUMBER } }
+        demandSegments: { type: Type.ARRAY, items: { type: Type.NUMBER } },
       },
-      required: ["growth", "demandSegments"]
-    }
+      required: ["growth", "demandSegments"],
+    },
   },
   required: [
     "generatedIdea",
@@ -125,8 +120,8 @@ const startupResponseSchema = {
     "pitches",
     "funding",
     "competitorAnalysis",
-    "chartData"
-  ]
+    "chartData",
+  ],
 };
 
 async function generateStartupData(input, mode = "fun") {
@@ -151,8 +146,8 @@ Rules:
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseSchema: startupResponseSchema
-    }
+      responseSchema: startupResponseSchema,
+    },
   });
 
   const text = response.text;
@@ -177,14 +172,14 @@ app.post("/api/generate", async (req, res) => {
 
     const saved = await Startup.create({
       inputKeywords: input,
-      ...plan
+      ...plan,
     });
 
     res.json(saved);
   } catch (error) {
     console.error("Generate Error:", error);
     res.status(500).json({
-      error: error.message || "Internal Server Error"
+      error: error.message || "Internal Server Error",
     });
   }
 });
@@ -199,6 +194,27 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log(`Server running on port ${process.env.PORT || 5000}`);
-});
+async function startServer() {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is missing in .env");
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is missing in .env");
+    }
+
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB Connected");
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Startup Error:", err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
